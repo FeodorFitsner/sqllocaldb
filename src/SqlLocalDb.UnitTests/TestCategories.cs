@@ -20,7 +20,7 @@ namespace System.Data.SqlLocalDb
         /// <summary>
         /// The name of the test category for tests that should only run as part of a continuous integration.
         /// </summary>
-        internal const string CIOnly = "CI Only";
+        internal const string CIOnly = "CIOnly";
 
         /// <summary>
         /// The name of the integration test category.
@@ -30,21 +30,21 @@ namespace System.Data.SqlLocalDb
         /// <summary>
         /// The name of the test category for tests that require administrative permissions to run.
         /// </summary>
-        internal const string RequiresAdministrativePermissions = "Requires Administrative Permissions";
+        internal const string RequiresAdministrativePermissions = "RequiresAdministrativePermissions";
 
         /// <summary>
         /// The name of the test category for tests that specifically require SQL Server 2012 or test its behavior.
         /// </summary>
-        internal const string SqlServer2012 = "SQL Server 2012";
+        internal const string SqlServer2012 = "SQLServer2012";
 
         /// <summary>
         /// The name of the test category for tests that specifically require SQL Server 2014 or test its behavior.
         /// </summary>
-        internal const string SqlServer2014 = "SQL Server 2014";
+        internal const string SqlServer2014 = "SQLServer2014";
 
         /// <summary>
         /// The name of the test category for tests that specifically require SQL Server 2016 or test its behavior.
         /// </summary>
-        internal const string SqlServer2016 = "SQL Server 2016";
+        internal const string SqlServer2016 = "SQLServer2016";
     }
 }

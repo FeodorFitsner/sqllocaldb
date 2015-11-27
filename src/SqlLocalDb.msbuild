@@ -84,7 +84,7 @@
     <CallTarget Targets="CreateNuGetPackage" Condition="'$(CreatePackage)' == 'true'" />
   </Target>
   <!--
-    Target that runs the automated tests using MSTest.
+    Target that runs the automated tests using Visual Studio Test Runner.
   -->
   <Target Name="Test">
     <!--
@@ -96,7 +96,7 @@
       <Output PropertyName="_IsCurrentUserAdmin" TaskParameter="IsAdmin" />
     </IsCurrentUserAdmin>
     <!--
-      Find the MSTest console runner on the local machine for the appropriate Visual Studio version.
+      Find the Visual Studio Test Runner on the local machine for the appropriate Visual Studio version.
     -->
     <PropertyGroup>
       <VSPath Condition="'$(MSBuildToolsVersion)' != '14.0'">$(VS120COMNTOOLS)</VSPath>
@@ -106,11 +106,11 @@
       <TestToolName>vstest.console.exe</TestToolName>
     </PropertyGroup>
     <!--
-      Set the appropriate MSTest options for the test run.
+      Set the appropriate options for the test run.
     -->
     <PropertyGroup Condition="'$(TestCaseFilter)' == ''">
-      <TestCaseFilter Condition="!$(_IsCurrentUserAdmin)">$(TestCaseFilter)TestCategory!=Requires Administrative Permissions&amp;</TestCaseFilter>
-      <TestCaseFilter Condition="'$(APPVEYOR)' == ''">$(TestCaseFilter)TestCategory!=CI Only&amp;</TestCaseFilter>
+      <TestCaseFilter Condition="!$(_IsCurrentUserAdmin)">$(TestCaseFilter)TestCategory!=RequiresAdministrativePermissions&amp;</TestCaseFilter>
+      <TestCaseFilter Condition="'$(APPVEYOR)' == ''">$(TestCaseFilter)TestCategory!=CIOnly&amp;</TestCaseFilter>
       <TestCaseFilter>$(TestCaseFilter.TrimEnd('&amp;'))</TestCaseFilter>
       <TestCaseFilter Condition="'$(TestCaseFilter)' != ''">/TestCaseFilter:$(TestCaseFilter)</TestCaseFilter>
     </PropertyGroup>
@@ -121,62 +121,44 @@
       <SpecifyTestSettingsFile Condition="'$(SpecifyTestSettingsFile)' == ''">true</SpecifyTestSettingsFile>
       <TestSettings Condition="'$(TestSettings)' == ''">$(SolutionDir)SqlLocalDb.runsettings</TestSettings>
       <TestOptions Condition="'$(TestCaseFilter)' != ''">$(TestOptions) %22$(TestCaseFilter)%22</TestOptions>
+      <TestOptions>$(TestOptions.TrimStart())</TestOptions>
       <!--
         If this is an AppVeyor CI build use the custom logger that registers the test results with the build log.
       -->
       <TestOptions Condition="'$(APPVEYOR)' != ''">$(TestOptions) /logger:Appveyor</TestOptions>
       <EnableCodeCoverage Condition="'$(EnableCodeCoverage)' == ''">true</EnableCodeCoverage>
-      <CodeCoverageCommand Condition="'$(EnableCodeCoverage)' == 'true'">/EnableCodeCoverage </CodeCoverageCommand>
-      <CodeCoverageCommand Condition="'$(EnableCodeCoverage)' != 'true'"></CodeCoverageCommand>
     </PropertyGroup>
     <!--
       Find the test assemblies and declare the platforms to test for.
-      The assembly is AnyCPU but is tested running under MSTest for
+      The assembly is AnyCPU but is tested running in processes that are
       32-bit and 64-bit to test that the P/Invoke code works correctly.
     -->
     <ItemGroup>
-      <TestContainer Include="$(OutDir)\*test*.dll" />
+      <TestContainer Include="$(OutDir)\*tests*.dll" />
       <PlatformsToTest Include="x86" />
       <PlatformsToTest Include="x64" />
     </ItemGroup>
     <PropertyGroup>
-      <_TestCommand>%22$(TestToolDir)$(TestToolName)%22 @(TestContainer->'%22%(fullpath)%22', ' ')</_TestCommand>
+      <_TestTool>%22$(TestToolDir)$(TestToolName)%22</_TestTool>
+      <_TestCommand>@(TestContainer->'%22%(fullpath)%22', ' ')</_TestCommand>
       <_TestCommand Condition="'$(SpecifyTestSettingsFile)' == 'true' and '$(TestSettings)' != ''">$(_TestCommand) %22/Settings:$(TestSettings)%22</_TestCommand>
-      <_TestCommand Condition="'$(EnableCodeCoverage)' == 'true'">$(_TestCommand) /EnableCodeCoverage</_TestCommand>
       <_TestCommand Condition="'$(TestInIsolation)' == 'true'">$(_TestCommand) /InIsolation</_TestCommand>
       <_TestCommand Condition="'$(SpecifyTestFramework)' == 'true' and '$(TestFramework)' != ''">$(_TestCommand) %22/Framework:$(TestFramework)%22</_TestCommand>
       <_TestCommand Condition="'$(UseConsoleTestLogger)' == 'true'">$(_TestCommand) /logger:Console</_TestCommand>
     </PropertyGroup>
-    <!--
-      Run MSTest for each test assembly.
-    -->
-    <Exec Command="$(_TestCommand) %22/Platform:%(PlatformsToTest.Identity)%22 $(TestOptions)" WorkingDirectory="$(OutDir)" />
-    <!--
-      Find the code coverage output files
-    -->
-    <ItemGroup>
-      <CodeCoverageData Include="$(SolutionDir)TestResults\**\*.coverage" />
-    </ItemGroup>
     <PropertyGroup>
-      <CodeCoverageXml Condition="'$(CodeCoverageXml)' == ''">$(OutDir)tests.coveragexml</CodeCoverageXml>
+      <_OpenCoverVersion>4.6.166</_OpenCoverVersion>
+      <_OpenCoverTool>%22$(SolutionDir)packages\OpenCover.$(_OpenCoverVersion)\Tools\OpenCover.Console.exe%22</_OpenCoverTool>
+      <CodeCoverageXml>$(OutDir)SqlLocalDb_coverage.xml</CodeCoverageXml>
     </PropertyGroup>
     <!--
-      Delete any existing coveragexml files.
+      Run Visual Studio Test Runner (via OpenCover if code coverage is enabled) for each test assembly.
     -->
-    <Delete Files="$(CodeCoverageXml)" />
+    <Exec Condition="'$(EnableCodeCoverage)' != 'true'" Command="$(_TestTool) $(_TestCommand) %22/Platform:%(PlatformsToTest.Identity)%22 $(TestOptions)" WorkingDirectory="$(OutDir)" />
+    <Delete Condition="'$(EnableCodeCoverage)' == 'true'" Files="$(CodeCoverageXml)" />
+    <Exec Condition="'$(EnableCodeCoverage)' == 'true'" Command="$(_OpenCoverTool) -register:user -target:$(_TestTool) -targetargs:%22$(_TestCommand) /Platform:%(PlatformsToTest.Identity) $(TestOptions)%22 -nodefaultfilters -output:%22$(OutDir)SqlLocalDb_coverage.xml%22 -hideskipped:All -skipautoprops -returntargetcode" WorkingDirectory="$(OutDir)" />    
     <!--
-      Covert the code coverage output files to a single combined XML file.
-    -->
-    <PropertyGroup Condition="'$(CodeCoverageTool)' == ''">
-      <CodeCoverageTool>$(VSPath)..\..\Team Tools\Dynamic Code Coverage Tools\CodeCoverage.exe</CodeCoverageTool>
-      <CodeCoverageTool Condition="!Exists('$(CodeCoverageTool)')">$(VS120COMNTOOLS)..\..\Team Tools\Dynamic Code Coverage Tools\CodeCoverage.exe</CodeCoverageTool>
-    </PropertyGroup>
-    <Error Condition="'$(EnableCodeCoverage)' == 'true' and '@(CodeCoverageData->Count())' == 0" Text="No code coverage files were produced." />
-    <Error Condition="'$(EnableCodeCoverage)' == 'true' and !Exists('$(CodeCoverageTool)')" Text="Code coverage tool '$(CodeCoverageTool)' could not be found." />
-    <Message Condition="'$(EnableCodeCoverage)' == 'true'" Text="Converting code coverage data to XML..." Importance="high" />
-    <Exec Condition="'$(EnableCodeCoverage)' == 'true' and '@(CodeCoverageData->Count())' > 0" Command="%22$(CodeCoverageTool)%22 analyze %22/output:$(CodeCoverageXml)%22 @(CodeCoverageData->'%22%(fullpath)%22', ' ')" />
-    <!--
-      Add coveragexml file as artifact for AppVeyor CI builds.
+      Add coverage XML file artifact for AppVeyor CI builds.
     -->
     <Exec Condition="'$(EnableCodeCoverage)' == 'true' and '$(APPVEYOR)' != '' and Exists('$(CodeCoverageXml)')" Command="appveyor PushArtifact %22$(CodeCoverageXml)%22" />
     <!--
@@ -189,7 +171,7 @@
       <CoverallsTool>@(CoverallsTool)</CoverallsTool>
     </PropertyGroup>
     <Message Condition="'$(EnableCodeCoverage)' == 'true' and '$(APPVEYOR)' != '' and '$(CoverallsRepoToken)' != '' and Exists('$(CodeCoverageXml)')" Text="Uploading code coverage XML to coveralls.io..." Importance="high" />
-    <Exec Condition="'$(EnableCodeCoverage)' == 'true' and '$(APPVEYOR)' != '' and '$(CoverallsRepoToken)' != '' and Exists('$(CodeCoverageXml)')" Command="$(CoverallsTool) --dynamiccodecoverage --input %22$(CodeCoverageXml)%22 --repoToken %22$(CoverallsRepoToken)%22 --commitId %22$(APPVEYOR_REPO_COMMIT)%22 --commitBranch %22$(APPVEYOR_REPO_BRANCH)%22 --commitAuthor %22$(APPVEYOR_REPO_COMMIT_AUTHOR)%22 --commitEmail %22$(APPVEYOR_REPO_COMMIT_AUTHOR_EMAIL)%22 --commitMessage %22$(APPVEYOR_REPO_COMMIT_MESSAGE)%22 --jobId %22$(APPVEYOR_BUILD_ID)%22 --serviceName %22AppVeyor%22 --useRelativePaths" IgnoreExitCode="true" WorkingDirectory="$(SqlLocalDbRoot)..\" />
+    <Exec Condition="'$(EnableCodeCoverage)' == 'true' and '$(APPVEYOR)' != '' and '$(CoverallsRepoToken)' != '' and Exists('$(CodeCoverageXml)')" Command="$(CoverallsTool) --opencover --input %22$(CodeCoverageXml)%22 --repoToken %22$(CoverallsRepoToken)%22 --commitId %22$(APPVEYOR_REPO_COMMIT)%22 --commitBranch %22$(APPVEYOR_REPO_BRANCH)%22 --commitAuthor %22$(APPVEYOR_REPO_COMMIT_AUTHOR)%22 --commitEmail %22$(APPVEYOR_REPO_COMMIT_AUTHOR_EMAIL)%22 --commitMessage %22$(APPVEYOR_REPO_COMMIT_MESSAGE)%22 --jobId %22$(APPVEYOR_BUILD_ID)%22 --serviceName %22AppVeyor%22 --useRelativePaths" IgnoreExitCode="true" WorkingDirectory="$(SqlLocalDbRoot)..\" />
   </Target>
   <!--
     Task that determines whether the user associated with
