@@ -18,8 +18,7 @@ build:
 after_test: 
     - "SET PATH=C:\\Python34;C:\\Python34\\Scripts;%PATH%"
     - pip install codecov
-    - codecov -f "MyProject_coverage.xml"
-    - codecov -f "MyProject_coverage.xml"
+    - codecov -f "src\BuildOutput\tests.coveragexml"
 
 artifacts:
   - path: src\BuildOutput\*.nupkg
