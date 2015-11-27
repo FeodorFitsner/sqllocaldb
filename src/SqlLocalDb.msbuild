@@ -120,7 +120,7 @@
       <TestInIsolation Condition="'$(TestInIsolation)' == ''">true</TestInIsolation>
       <SpecifyTestSettingsFile Condition="'$(SpecifyTestSettingsFile)' == ''">true</SpecifyTestSettingsFile>
       <TestSettings Condition="'$(TestSettings)' == ''">$(SolutionDir)SqlLocalDb.runsettings</TestSettings>
-      <TestOptions Condition="'$(TestCaseFilter)' != ''">$(TestOptions) %22$(TestCaseFilter)%22</TestOptions>
+      <TestOptions Condition="'$(TestCaseFilter)' != ''">$(TestOptions) $(TestCaseFilter)</TestOptions>
       <TestOptions>$(TestOptions.TrimStart())</TestOptions>
       <!--
         If this is an AppVeyor CI build use the custom logger that registers the test results with the build log.
