@@ -147,16 +147,17 @@
       <_TestCommand Condition="'$(UseConsoleTestLogger)' == 'true'">$(_TestCommand) /logger:Console</_TestCommand>
     </PropertyGroup>
     <PropertyGroup>
+      <CodeCoverageXml>$(OutDir)SqlLocalDb_coverage.xml</CodeCoverageXml>
       <_OpenCoverVersion>4.6.166</_OpenCoverVersion>
       <_OpenCoverTool>%22$(SolutionDir)packages\OpenCover.$(_OpenCoverVersion)\Tools\OpenCover.Console.exe%22</_OpenCoverTool>
-      <CodeCoverageXml>$(OutDir)SqlLocalDb_coverage.xml</CodeCoverageXml>
+      <_OpenCoverOptions>-register:user -nodefaultfilters -hideskipped:All -skipautoprops -returntargetcode -output:%22$(CodeCoverageXml)%22</_OpenCoverOptions>
     </PropertyGroup>
     <!--
       Run Visual Studio Test Runner (via OpenCover if code coverage is enabled) for each test assembly.
     -->
     <Exec Condition="'$(EnableCodeCoverage)' != 'true'" Command="$(_TestTool) $(_TestCommand) %22/Platform:%(PlatformsToTest.Identity)%22 $(TestOptions)" WorkingDirectory="$(OutDir)" />
     <Delete Condition="'$(EnableCodeCoverage)' == 'true'" Files="$(CodeCoverageXml)" />
-    <Exec Condition="'$(EnableCodeCoverage)' == 'true'" Command="$(_OpenCoverTool) -register:user -target:$(_TestTool) -targetargs:%22$(_TestCommand) /Platform:%(PlatformsToTest.Identity) $(TestOptions)%22 -nodefaultfilters -output:%22$(OutDir)SqlLocalDb_coverage.xml%22 -hideskipped:All -skipautoprops -returntargetcode" WorkingDirectory="$(OutDir)" />    
+    <Exec Condition="'$(EnableCodeCoverage)' == 'true'" Command="$(_OpenCoverTool) $(_OpenCoverOptions) -target:$(_TestTool) -targetargs:%22$(_TestCommand) /Platform:%(PlatformsToTest.Identity) $(TestOptions)%22" WorkingDirectory="$(OutDir)" />
     <!--
       Add coverage XML file artifact for AppVeyor CI builds.
     -->
