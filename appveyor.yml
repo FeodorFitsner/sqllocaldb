@@ -15,7 +15,7 @@ build:
   project: src\SqlLocalDb.msbuild
   verbosity: minimal
 
-after_test: 
+after_build: 
     - "SET PATH=C:\\Python34;C:\\Python34\\Scripts;%PATH%"
     - pip install codecov
     - codecov -f "src\BuildOutput\tests.coveragexml"
