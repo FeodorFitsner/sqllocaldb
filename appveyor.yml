@@ -15,6 +15,12 @@ build:
   project: src\SqlLocalDb.msbuild
   verbosity: minimal
 
+after_test: 
+    - "SET PATH=C:\\Python34;C:\\Python34\\Scripts;%PATH%"
+    - pip install codecov
+    - codecov -f "MyProject_coverage.xml"
+    - codecov -f "MyProject_coverage.xml"
+
 artifacts:
   - path: src\BuildOutput\*.nupkg
   - path: src\BuildOutput\*.zip
